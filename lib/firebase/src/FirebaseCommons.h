@@ -20,10 +20,6 @@ void firebaseConfig(FirebaseConfig &config, FirebaseAuth &auth)
     config.token_status_callback = tokenStatusCallback;
 }
 
-long currentTimestamp(FirebaseData &fbdo)
-{
-    Firebase.setTimestamp(fbdo, "/timestamp");
-    return fbdo.to<uint64_t>();
-}
+
 
 #endif

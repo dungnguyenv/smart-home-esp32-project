@@ -9,24 +9,24 @@
  *
  */
 
-// This example shows how to set and push timestamp (server time) which is the server variable that suopported by Firebase
-
 #include <Arduino.h>
 #include <FirebaseCommons.h>
+#include <LivingRoom.h>
 
 // Define Firebase Data object
 FirebaseData fbdo;
+FirebaseData livingRoomStream;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-bool taskCompleted = false;
+unsigned long sendDataPrevMillis = 0;
+
+LivingRoom LivingRoomObject = LivingRoom::getLivingRoomObject();
 
 void setup()
 {
 
   Serial.begin(115200);
-  Serial.println();
-  Serial.println();
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
@@ -47,49 +47,42 @@ void setup()
   Firebase.begin(&config, &auth);
 
   Firebase.reconnectWiFi(true);
+
+  // The data under the node being stream (parent path) should keep small
+  // Large stream payload leads to the parsing error due to memory allocation.
+
+  // The MultiPathStream works as normal stream with the payload parsing function.
+
+  LivingRoomObject.init(&Firebase, &livingRoomStream);
 }
 
 void loop()
 {
+
   // Firebase.ready() should be called repeatedly to handle authentication tasks.
 
-  if (Firebase.ready() && !taskCompleted)
+  if (Firebase.ready() && (millis() - sendDataPrevMillis > 2000 || sendDataPrevMillis == 0))
   {
-    taskCompleted = true;
+    sendDataPrevMillis = millis();
 
-    Serial.printf("Set timestamp... %s\n", Firebase.setTimestamp(fbdo, "/test/timestamp") ? "ok" : fbdo.errorReason().c_str());
+    Serial.print("\nSet json...");
 
-    if (fbdo.httpCode() == FIREBASE_ERROR_HTTP_CODE_OK)
-    {
-      // In setTimestampAsync, the following timestamp will be 0 because the response payload was ignored for all async functions.
+    // FirebaseJson json;
 
-      // Timestamp saved in millisecond, get its seconds from int value
-      Serial.print("TIMESTAMP (Seconds): ");
-      Serial.println(fbdo.to<int>());
+    LivingRoomObject.updateTemperatureAndHuminity();
 
-      // Or print the total milliseconds from double value
-      // Due to bugs in Serial.print in Arduino library, use printf to print double instead.
-      printf("TIMESTAMP (milliSeconds): %lld\n", fbdo.to<uint64_t>());
-    }
+    // for (size_t i = 0; i < 10; i++)
+    // {
+    //   json.set("node1/data", "v1");
+    //   json.set("node1/num", count);
+    //   json.set("node2/data", "v2");
+    //   json.set("node2/num", count * 3);
+    //   // The response is ignored in this async function, it may return true as long as the connection is established.
+    //   // The purpose for this async function is to set, push and update data instantly.
+    //   Firebase.setJSONAsync(fbdo, parentPath, json);
+    //   count++;
+    // }
 
-    Serial.printf("Get timestamp... %s\n", Firebase.getDouble(fbdo, "/test/timestamp") ? "ok" : fbdo.errorReason().c_str());
-    if (fbdo.httpCode() == FIREBASE_ERROR_HTTP_CODE_OK)
-      printf("TIMESTAMP: %lld\n", fbdo.to<uint64_t>());
-
-    // To set and push data with timestamp, requires the JSON data with .sv placeholder
-    FirebaseJson json;
-
-    json.set("Data", "Hello");
-    // now we will set the timestamp value at Ts
-    json.set("Ts/.sv", "timestamp"); // .sv is the required place holder for sever value which currently supports only string "timestamp" as a value
-
-    // Set data with timestamp
-    Serial.printf("Set data with timestamp... %s\n", Firebase.setJSON(fbdo, "/test/set/data", json) ? fbdo.to<FirebaseJson>().raw() : fbdo.errorReason().c_str());
-
-    // Push data with timestamp
-    Serial.printf("Push data with timestamp... %s\n", Firebase.pushJSON(fbdo, "/test/push/data", json) ? "ok" : fbdo.errorReason().c_str());
-
-    // Get previous pushed data
-    // Serial.printf("Get previous pushed data... %s\n", Firebase.getJSON(fbdo, "/test/push/data/" + fbdo.pushName()) ? fbdo.to<FirebaseJson>().raw() : fbdo.errorReason().c_str());
+    Serial.println("ok\n");
   }
 }
