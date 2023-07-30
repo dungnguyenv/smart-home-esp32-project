@@ -1,0 +1,136 @@
+/*
+ * This ESP32 code is created by esp32io.com
+ *
+ * This ESP32 code is released in the public domain
+ *
+ * For more detail (instruction and wiring diagram), visit https://esp32io.com/tutorials/esp32-rfid-nfc
+ */
+
+#include <SPI.h>
+#include <MFRC522.h>
+// #include <ESP32Servo.h>
+
+#define SS_PIN 5
+#define RST_PIN 2
+#define DOOR_PIN 27
+#define RELAY_PIN 26
+
+// Servo doorServo;
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+String rfid_username[3] = {"dungnguyen", "andleduc", "demo"};
+byte rfid_authorize_uid[3][4] = {
+    {0xEC, 0x94, 0x4A, 0x2E},
+    {0xFA, 0xB4, 0x2B, 0xB3},
+    {0x54, 0xBD, 0xF7, 0x51}};
+
+boolean openDoor = false;
+boolean curtainsUp = false;
+
+float LIGHT_THRESHOLD = 1000.0;
+float lightSensorValue;
+
+unsigned long openDoorDuration = 2000;
+
+void handleOpenDoor();
+
+void setup()
+{
+    Serial.begin(115200);
+    SPI.begin();                  // init SPI bus
+    rfid.PCD_Init();              // init MFRC522
+    pinMode(RELAY_PIN, OUTPUT);   // initialize pin as an output.
+    digitalWrite(RELAY_PIN, LOW); // deactivate the relay
+
+    Serial.println("Tap an RFID/NFC tag on the RFID-RC522 reader");
+
+    // doorServo.attach(DOOR_PIN);
+    // doorServo.write(0);
+}
+
+void loop()
+{
+    unsigned long beginOpenDoorTime;
+    if (rfid.PICC_IsNewCardPresent())
+    { // new tag is available
+        if (rfid.PICC_ReadCardSerial())
+        { // NUID has been readed
+            MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
+            if (rfid.uid.uidByte[0] == authorizedUID1[0] &&
+                rfid.uid.uidByte[1] == authorizedUID1[1] &&
+                rfid.uid.uidByte[2] == authorizedUID1[2] &&
+                rfid.uid.uidByte[3] == authorizedUID1[3])
+            {
+                // TODO: open door + turn on OLED + turn on fan
+
+                Serial.println("Authorized Tag 1");
+                openDoor = true;
+                handleOpenDoor();
+            }
+            else if (rfid.uid.uidByte[0] == authorizedUID2[0] &&
+                     rfid.uid.uidByte[1] == authorizedUID2[1] &&
+                     rfid.uid.uidByte[2] == authorizedUID2[2] &&
+                     rfid.uid.uidByte[3] == authorizedUID2[3])
+            {
+                Serial.println("AUTHORIZED NGUYEN VAN DUNG ");
+                openDoor = true;
+                handleOpenDoor();
+            }
+            else if (rfid.uid.uidByte[0] == authorizedUID3[0] &&
+                     rfid.uid.uidByte[1] == authorizedUID3[1] &&
+                     rfid.uid.uidByte[2] == authorizedUID3[2] &&
+                     rfid.uid.uidByte[3] == authorizedUID3[3])
+            {
+                Serial.println("AUTHORIZED LE DUC ANH 20191671");
+                // digitalWrite(RELAY_PIN, HIGH); // activate the relay for 2 seconds
+                // delay(2000);
+                // digitalWrite(RELAY_PIN, LOW); // deactivate the relay
+                openDoor = true;
+                handleOpenDoor();
+            }
+            else
+            {
+                Serial.print("Unauthorized Tag with UID:");
+                for (int i = 0; i < rfid.uid.size; i++)
+                {
+                    Serial.print(rfid.uid.uidByte[i] < 0x10 ? " 0" : " ");
+                    Serial.print(rfid.uid.uidByte[i], HEX);
+                }
+                Serial.println();
+            }
+
+            rfid.PICC_HaltA();      // halt PICC
+            rfid.PCD_StopCrypto1(); // stop encryption on PCD
+        }
+    }
+    openDoor = false;
+}
+boolean checkRFID(byte &rfidValue)
+{
+    // TODO: viết hàm check byte -> đỡ lặp code
+    return true;
+}
+void handleOpenDoor()
+{
+    // int i = doorServo.read();
+
+    // pinMode(RELAY_PIN, OUTPUT); // openDoor, turn on LED, OLED and fan -> pin power pins of those devices together
+    // if (doorServo.read() < 170)
+    // {
+    //     for (int i = 0; i < 180; i++)
+    //     {
+
+    //         doorServo.write(i);
+    //         delay(3);
+    //     }
+    // }
+
+    // delay(openDoorDuration);
+    // i = doorServo.read();
+    // for (i; i > 3; i--)
+    // {
+    //     doorServo.write(i);
+    //     delay(3);
+    // }
+    digitalWrite(DOOR_PIN, HIGH);
+}

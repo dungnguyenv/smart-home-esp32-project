@@ -1,0 +1,1 @@
+pio lib -g install "I:\RoyalHUST\DATN\lib\Adafruit-Fingerprint-Sensor-Library-master.zip"
